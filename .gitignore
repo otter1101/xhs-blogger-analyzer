@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 运行时生成
+output/
+data/
+*.docx
+*.json
+!references/**
+
+# 工作流临时文件
+_参考资料/
+.workbuddy/
+GIT推送指南.md
+宣传文案_500字版.md
+GitHub仓库描述_350字符.md
+README.docx
