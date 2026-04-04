@@ -87,6 +87,11 @@ export HTTPS_PROXY="http://127.0.0.1:7890"
 
 运行 `python scripts/crawl_blogger.py <博主名> -o ./data`
 
+**⚠️ 重要约束（不得违反）：**
+- 必须逐条调用 `get_feed_detail` 获取笔记正文。仅有标题和互动数字的列表数据不足以做深度分析——正文、评论、标签都只能从 detail 接口获得。
+- 不得自行编写脚本替代 `scripts/crawl_blogger.py`，必须调用现有脚本。
+- 不得修改 `--max-notes` 参数的值（用户已设定好目标条数）。
+
 自动完成：
 
 1. **搜索定位博主**（优先小红书号，否则按昵称精确匹配 → 昵称包含 → 出现频次）
@@ -168,6 +173,11 @@ export HTTPS_PROXY="http://127.0.0.1:7890"
 #### 步骤 B：AI 深度分析（宿主 AI 在对话中执行）
 
 **AI 读取「数据底稿」和「AI分析任务」，按以下框架逐份产出最终报告。**
+
+**⚠️ 产出物约束：**
+- 必须分别生成 4 份独立文件，严禁将所有内容合并为一份文档。
+- 每份文档写完后立即保存为独立文件，不要等全部写完再批量保存。
+- 如果某份生成失败，立即重试，不要跳过。
 
 产出物为 4 份文档，每份的结构、内容要求和写作标准定义在「AI分析任务.md」中。
 详细的质量标杆参见 `references/产出物质量标杆.md`。
@@ -367,3 +377,14 @@ python scripts/deep_analyze.py ./data/<博主名>_analysis.json "<博主名>" -o
 - `references/README.md` — 项目说明和快速开始
 - `references/CHANGELOG.md` — 版本迭代日志（v0.1 → v0.4）
 - `references/平台兼容性测试记录.md` — 各AI工具测试结果和方法
+
+---
+
+## ⚠️ 使用注意事项
+
+1. **md_to_docx 调用方式**（在 Skill 根目录下运行）：
+   ```bash
+   python scripts/utils/md_to_docx.py 输入文件.md 输出文件.docx
+   ```
+
+2. **遇到生成失败**：直接重试同一步骤，不要跳到下一步。
