@@ -20,6 +20,8 @@ import subprocess
 # 脚本根目录（run.py 所在位置）
 SKILL_ROOT = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS_DIR = os.path.join(SKILL_ROOT, "scripts")
+sys.path.insert(0, SCRIPTS_DIR)
+from verify import check_junk_files
 
 
 def run_phase(phase_name, cmd, cwd=None):
@@ -184,6 +186,12 @@ def main():
             if f.endswith(".docx"):
                 print(f"  📄 {f}")
     print()
+
+    # === V7 垃圾文件检测（自动运行）===
+    v7_msg = check_junk_files(SKILL_ROOT)
+    if "WARNING" in v7_msg:
+        print(v7_msg)
+        print("   建议清理上述文件，避免污染工作目录。")
 
 
 if __name__ == "__main__":

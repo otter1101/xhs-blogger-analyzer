@@ -22,6 +22,8 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.mcp_client import MCPClient, MCPError
 from utils.common import parse_count, safe_filename
+from verify import (check_content_completeness, check_note_count,
+                    check_time_field, check_duplicates, get_sample_watermark)
 
 
 # ----------------------------------------------------------
@@ -320,7 +322,27 @@ def crawl_blogger(keyword=None, user_id=None, output_dir=None, port=18060, is_se
     
     ok_count = len([d for d in details if "_error" not in d])
     print(f"\n💾 笔记详情: {details_path} ({ok_count}条有效)")
-    
+
+    # === 数据校验（自动运行，不依赖 AI 调用）===
+    print("\n" + "=" * 60)
+    print("📋 数据校验")
+    print("=" * 60)
+    valid_details = [d for d in details if "_error" not in d]
+
+    v1_ok, v1_msg = check_content_completeness(valid_details)
+    print(v1_msg)
+    if not v1_ok:
+        print("\n🚨 正文数据不完整，无法进行可靠的深度分析。")
+        print("   请确认是否逐条调用了 get_feed_detail。")
+        sys.exit(1)
+
+    # V2-V5：警告类，不阻断（V2 的 expected_count 在批次B加 max_notes 后补入）
+    print(check_note_count(valid_details, 0))
+    print(check_time_field(valid_details))
+    print(check_duplicates(valid_details))
+    print(get_sample_watermark(valid_details, profile))
+    print("=" * 60)
+
     return {
         "profile": profile,
         "notes_list": notes_list,

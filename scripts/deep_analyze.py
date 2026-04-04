@@ -25,6 +25,7 @@ from collections import Counter
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.common import safe_filename, parse_count
 from utils.md_to_docx import md_to_docx
+from verify import check_content_completeness, check_output_files
 
 
 # ----------------------------------------------------------
@@ -621,6 +622,15 @@ def deep_analyze(analysis_path, nickname, output_dir, notes_details_path=None):
             note = item.get("data", {}).get("note", item)
             full_notes.append(note)
 
+        # === 数据校验（自动运行）===
+        valid_details = [d for d in raw_details if "_error" not in d]
+        v1_ok, v1_msg = check_content_completeness(valid_details)
+        print(v1_msg)
+        if not v1_ok:
+            print("\n🚨 正文数据不完整（< 80%），拒绝生成分析报告。")
+            print("   请先补爬正文数据：重新运行 crawl_blogger.py。")
+            sys.exit(1)
+
     # ---- 确定性分析 ----
     titles = [n["title"] for n in (notes or top10) if n.get("title")]
     descs = []
@@ -688,6 +698,14 @@ def deep_analyze(analysis_path, nickname, output_dir, notes_details_path=None):
     with open(prompt_path, "w", encoding="utf-8") as f:
         f.write(prompt_content)
     print(f"  📋 AI Prompt: {prompt_path}")
+
+    # === V6 产出文件数校验（自动运行）===
+    expected_files = [r["name"] for r in results]
+    v6_ok, v6_msg = check_output_files(output_dir, expected_files)
+    print(v6_msg)
+    if not v6_ok:
+        print("\n🚨 产出文件不完整，请检查上方错误信息并重试。")
+        sys.exit(1)
 
     return {"docs": results, "prompt_path": prompt_path}
 
