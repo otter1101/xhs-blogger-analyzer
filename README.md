@@ -33,7 +33,7 @@
 拆解博主 （对标博主账号）
 ```
 
-等20分钟，拿到 4 份 Word 文档，包含完整的内容策略拆解。
+等几分钟，拿到 4 份 Word 文档，包含完整的内容策略拆解。
 
 ---
 
@@ -77,7 +77,7 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/xhs-blogger-analyzer.git
+git clone https://github.com/otter1101/xhs-blogger-analyzer.git
 cd xhs-blogger-analyzer
 
 # 自动安装到 AI 编程助手（自动检测 WorkBuddy / Claude Code）
@@ -236,6 +236,7 @@ xhs-blogger-analyzer/
 │   ├── analyze.py            # Phase 2: 数据分析（动态聚类+标签+TOP10）
 │   ├── generate_docs.py      # Phase 3: 骨架文档生成（MD → Word）
 │   ├── deep_analyze.py       # Phase 3.5: 确定性分析 + AI 任务生成
+│   ├── verify.py             # 数据校验模块（7项自动检查，内嵌到各脚本）
 │   └── utils/
 │       ├── mcp_client.py     # MCP HTTP 客户端（纯 urllib）
 │       ├── md_to_docx.py     # Markdown → Word 转换器
@@ -265,13 +266,13 @@ xhs-blogger-analyzer/
 | WorkBuddy | `python install.py` | ✅ 已验证 | 推荐平台 |
 | Claude Code | `python install.py` | ✅ 已验证 | SKILL.md 兼容 |
 
-### 爬取80条笔记-多模型测试结果
+### 多模型测试结果
 
 | AI 模型 | 综合评分 | 耗时 | 产出格式 | 分析深度 |
 |---------|---------|------|---------|---------|
 | Claude Opus 4.6 | ⭐ 84/100 | ~60min | Word (.docx) | 🟢 最佳 |
-| Claude Sonnet 4.6 | 76/100 | ~60min | Word | 🟡 中上 |
-| MiniMax 2.7 | 71/100 | ~35min | Word | 🟡 中等 |
+| Claude Sonnet 4.6 | 76/100 | ~60min | PDF | 🟡 中上 |
+| MiniMax 2.7 | 71/100 | ~35min | PDF | 🟡 中等 |
 
 ---
 
@@ -298,9 +299,10 @@ xhs-blogger-analyzer/
 - [x] v0.2 — 全 Phase 脚本实现
 - [x] v0.3 — 通用化重构（去硬编码，动态聚类）
 - [x] v0.4 — 全自动环境准备 + AI 深度分析 + 一键运行
-- [ ] v0.5 — 数据采样一致性优化 + 断点恢复增强
-- [ ] v0.6 — 多博主批量模式 + 产出物格式统一
-- [ ] v1.0 — 稳定版发布
+- [x] v1.5 — 正式发布：多平台兼容 + 一键运行
+- [x] v1.5.1 — 数据校验加固：verify.py 7项自动检查 + SKILL.md 强约束
+- [x] v1.5.2 — 爬取逻辑优化：搜索早停 + 评论热度排序 + 二维码修复
+- [x] v1.6 — 采集健壮性：断点恢复 + 删除笔记检测
 
 ---
 
