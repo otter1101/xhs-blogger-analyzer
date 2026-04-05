@@ -94,6 +94,118 @@ def build_tag_clusters(all_notes_tags, top_n=8):
 
 
 # ----------------------------------------------------------
+# 认知层提取函数
+# ----------------------------------------------------------
+
+def extract_opinion_sentences(notes):
+    """D1：从全量笔记正文中提取观点句候选"""
+    opinion_keywords = {
+        "判断词": ["我觉得", "我认为", "其实", "本质上", "说白了", "归根结底",
+                   "核心是", "关键在于", "真正的", "最重要的"],
+        "转折": ["但其实", "然而", "不是…而是", "不是...而是", "与其", "看起来",
+                 "实际上", "大家都说", "表面上"],
+        "总结": ["所以", "因此", "这说明", "这意味着", "一句话概括",
+                 "总结一下", "换句话说"],
+    }
+
+    candidates = []
+    for note in notes:
+        desc = note.get("desc", "") or ""
+        if not desc:
+            continue
+        # 按句子分割
+        sentences = re.split(r"[。！？\n]", desc)
+        for sent in sentences:
+            sent = sent.strip()
+            if len(sent) < 8:
+                continue
+            for match_type, keywords in opinion_keywords.items():
+                if any(kw in sent for kw in keywords):
+                    candidates.append({
+                        "sentence": sent[:120],
+                        "source_note_id": note.get("id", ""),
+                        "source_title": note.get("title", "")[:30],
+                        "source_likes": note.get("likes_raw", "?"),
+                        "match_type": match_type,
+                    })
+                    break  # 每句只记一次
+
+    mode = "script_filtered" if len(candidates) >= 10 else "full_text"
+    return candidates, mode
+
+
+def analyze_writing_structure(notes):
+    """D2：统计开头/结尾类型（追加到现有结构分析）"""
+    opening_patterns = {
+        "故事开头": ["那天", "记得", "有一次", "上周", "上个月", "去年", "小时候", "从前"],
+        "反问开头": ["你有没有", "你是不是", "为什么", "凭什么", "难道", "真的吗", "？"],
+        "数据开头": ["%", "万", "个", "次", "元", "块", "倍", "调查", "数据"],
+        "自嘲开头": ["我这个", "作为一个", "承认", "说实话", "坦白"],
+        "观点直抛": ["我觉得", "我认为", "其实", "本质上", "说白了"],
+    }
+    ending_patterns = {
+        "金句收尾": ["就是", "才是", "而已", "罢了", "本质", "归根"],
+        "行动号召": ["关注", "收藏", "点赞", "试试", "去做", "行动"],
+        "开放提问": ["你呢", "你觉得", "评论区", "留言", "告诉我", "你们"],
+        "总结回顾": ["总结", "所以", "因此", "最后", "希望"],
+    }
+
+    opening_counts = {k: 0 for k in opening_patterns}
+    ending_counts = {k: 0 for k in ending_patterns}
+
+    for note in notes:
+        desc = note.get("desc", "") or ""
+        if not desc:
+            continue
+        head = desc[:50]
+        tail = desc[-50:]
+        for ptype, keywords in opening_patterns.items():
+            if any(kw in head for kw in keywords):
+                opening_counts[ptype] += 1
+                break
+        for ptype, keywords in ending_patterns.items():
+            if any(kw in tail for kw in keywords):
+                ending_counts[ptype] += 1
+                break
+
+    return {
+        "opening_types": {k: v for k, v in opening_counts.items() if v > 0},
+        "ending_types": {k: v for k, v in ending_counts.items() if v > 0},
+    }
+
+
+def extract_value_words(notes):
+    """D3：方案B，从正文提取高频2-4字词，不用预设词库"""
+    stopwords = set("的了是在我你他她它们这那有也都就和与或但而被把让给对从到为以及等中上下里外前后左右啊呢吧哦哈嗯")
+    stop_phrases = {"时候", "自己", "觉得", "一个", "一些", "一下", "一样", "一直", "一起",
+                    "可以", "没有", "什么", "这个", "那个", "这样", "那样", "如果", "因为",
+                    "所以", "但是", "然后", "还是", "已经", "非常", "真的", "感觉", "知道",
+                    "现在", "时间", "东西", "事情", "问题", "方法", "内容", "大家", "我们",
+                    "他们", "她们", "你们", "很多", "一点", "有点", "有些", "其实", "只是"}
+
+    word_counter = Counter()
+    for note in notes:
+        desc = note.get("desc", "") or ""
+        if not desc:
+            continue
+        # 先删除话题标签（#标签[话题]# 和 #标签 两种格式）
+        desc = re.sub(r"#[^#\s]+?(?:\[.*?\])?#?", "", desc)
+        # 切词
+        tokens = re.split(r"[\s，。！？、；：""''【】《》\(\)（）\[\]…—\-/\\|]", desc)
+        for token in tokens:
+            token = token.strip()
+            if 2 <= len(token) <= 4:
+                # 只保留纯汉字，过滤emoji/数字/英文/符号
+                if not re.match(r"^[\u4e00-\u9fff]+$", token):
+                    continue
+                if token in stop_phrases:
+                    continue
+                word_counter[token] += 1
+
+    return [{"word": w, "count": c} for w, c in word_counter.most_common(15)]
+
+
+# ----------------------------------------------------------
 # 核心分析逻辑
 # ----------------------------------------------------------
 def analyze_notes(details_path, self_details_path=None):
@@ -228,6 +340,11 @@ def analyze_notes(details_path, self_details_path=None):
             "target_stats": stats,
         }
 
+    # ---- 认知层提取 ----
+    opinion_candidates, opinion_mode = extract_opinion_sentences(notes)
+    writing_structure = analyze_writing_structure(notes)
+    value_words = extract_value_words(notes)
+
     return {
         "notes": notes,
         "stats": stats,
@@ -236,6 +353,10 @@ def analyze_notes(details_path, self_details_path=None):
         "top10": top10,
         "comparison": comparison,
         "errors": errors,
+        "opinion_candidates": opinion_candidates,
+        "opinion_extraction_mode": opinion_mode,
+        "writing_structure": writing_structure,
+        "value_words": value_words,
     }
 
 
@@ -300,5 +421,22 @@ if __name__ == "__main__":
         save_data["notes"] = save_notes
         save_data["notes_count"] = len(save_notes)
         json.dump(save_data, f, ensure_ascii=False, indent=2)
-    
+
     print(f"\n💾 分析数据: {out_path}")
+
+    # ---- 终端打印认知层数据供人工筛选 ----
+    candidates = result["opinion_candidates"]
+    mode = result["opinion_extraction_mode"]
+    print(f"\n{'='*60}")
+    print(f"  观点句候选（共 {len(candidates)} 条，模式：{mode}）")
+    print(f"{'='*60}")
+    for i, c in enumerate(candidates):
+        print(f"  {i+1:3d}. [{c['match_type']}] {c['sentence']}")
+        print(f"       — 《{c['source_title']}》({c['source_likes']}赞)")
+
+    print(f"\n{'='*60}")
+    print(f"  高频词 TOP15（未筛选，含通用词）")
+    print(f"{'='*60}")
+    vw = result["value_words"]
+    print("  " + " / ".join(f"{v['word']}({v['count']}次)" for v in vw))
+    print(f"{'='*60}\n")
