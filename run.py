@@ -1,15 +1,13 @@
 """
-小红书博主拆解 Skill — 一键运行入口
-串联 Phase 0（环境准备）→ Phase 1（数据采集）→ Phase 2（数据分析）→ Phase 3（文档骨架）→ Phase 3.5（AI深度分析）
+博主蒸馏器 — 一键运行入口
+串联 Phase 0（环境准备）→ Phase 0.5（前置交互）→ Phase 1（数据采集）
+→ Phase 2（数据分析）→ Phase 3（蒸馏 + 产出物生成）
 
 用法：
     python run.py "<博主名>"
     python run.py "<博主名>" --self "<自己昵称>"
     python run.py "<博主名>" --keywords "烘焙,食谱,探店"
-    python run.py "<博主名>" --self "<自己昵称>" --keywords "AI,工具,教程"
-    python run.py "<博主名>" --skip-env          # 跳过环境检查
-    python run.py "<博主名>" --data-dir ./mydata  # 自定义数据目录
-    python run.py "<博主名>" --output-dir ./out   # 自定义输出目录
+    python run.py "<博主名>" --skip-env
 """
 
 import sys
@@ -21,7 +19,13 @@ import subprocess
 SKILL_ROOT = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS_DIR = os.path.join(SKILL_ROOT, "scripts")
 sys.path.insert(0, SCRIPTS_DIR)
+
 from verify import check_junk_files
+from utils.common import safe_filename
+
+
+MODE_OPTIONS = {"A", "B"}
+COUNT_OPTIONS = {"1": 30, "2": 50, "3": 80}
 
 
 def run_phase(phase_name, cmd, cwd=None):
@@ -44,9 +48,58 @@ def run_phase(phase_name, cmd, cwd=None):
     print(f"✅ {phase_name} 完成")
 
 
+def prompt_phase_0_5():
+    """展示操作手册要求的前置交互，并返回 (mode, max_notes)。"""
+    print()
+    print("─────────────────────────────────────")
+    print("🎯 欢迎使用博主蒸馏器！")
+    print()
+    print("请选择分析模式：")
+    print()
+    print("  🔍 A — 拆解对标博主")
+    print("     爬取 TA 的笔记 → 提炼内容公式和思维方式")
+    print("     → 生成「TA的名字_创作指南.skill/」")
+    print("     以后写内容时加载它，相当于随时在线的内容教练")
+    print()
+    print("  🪞 B — 诊断我的账号")
+    print("     爬取你的笔记 → 找到内容基因和增长瓶颈")
+    print("     → 生成「你的名字_创作基因.skill/」")
+    print("     让 AI 写出的内容像你自己写的，无缝嵌入创作工作流")
+    print()
+    print("  ⚡ C — 对标 + 借鉴（暂未开放，v2.1 支持）")
+    print()
+
+    while True:
+        user_mode = input("请输入 A 或 B：\n").strip().upper()
+        if user_mode in MODE_OPTIONS:
+            break
+        if user_mode == "C":
+            print("⚡ C — 对标 + 借鉴暂未开放，请先选择 A 或 B。")
+        else:
+            print("请输入 A 或 B。")
+
+    print()
+    print("📊 爬取数量（推荐 50 条）：")
+    print("  ① 30 条 — 快速扫描（约 15-25 分钟）")
+    print("  ② 50 条 — 推荐档位（约 30-45 分钟）")
+    print("  ③ 80 条 — 深度分析（约 45-65 分钟）")
+    print()
+    print("💡 每 10 条自动存盘，中断了下次继续。")
+    print("─────────────────────────────────────")
+
+    while True:
+        count_choice = input("请选择 1 / 2 / 3：\n").strip()
+        if count_choice in COUNT_OPTIONS:
+            max_notes = COUNT_OPTIONS[count_choice]
+            break
+        print("请输入 1 / 2 / 3。")
+
+    return user_mode, max_notes
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="小红书博主拆解 Skill — 一键运行",
+        description="博主蒸馏器 — 一键运行",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例：
@@ -58,12 +111,12 @@ def main():
     )
 
     parser.add_argument("blogger", help="目标博主名称或小红书号")
-    parser.add_argument("--self", dest="self_blogger", help="自己的博主名称（用于对比分析）")
+    parser.add_argument("--self", dest="self_blogger", help="自己的博主名称（用于额外对比分析）")
     parser.add_argument("--keywords", help="领域关键词（逗号分隔），用于扩展搜索")
     parser.add_argument("--skip-env", action="store_true", help="跳过 Phase 0 环境检查")
     parser.add_argument("--port", type=int, default=18060, help="MCP 服务端口（默认 18060）")
     parser.add_argument("--data-dir", default="./data", help="数据存放目录（默认 ./data）")
-    parser.add_argument("--output-dir", default="./output", help="文档输出目录（默认 ./output）")
+    parser.add_argument("--output-dir", default="./output", help="产出目录（默认 ./output）")
 
     args = parser.parse_args()
 
@@ -71,7 +124,7 @@ def main():
     python = sys.executable
 
     print()
-    print("🚀 小红书博主拆解 Skill — 一键运行")
+    print("🚀 博主蒸馏器 — 一键运行")
     print(f"   目标博主: {blogger}")
     if args.self_blogger:
         print(f"   对比账号: {args.self_blogger}")
@@ -94,11 +147,21 @@ def main():
         print("\n⏭️  跳过 Phase 0（--skip-env）")
 
     # ----------------------------------------------------------
+    # Phase 0.5: 前置交互
+    # ----------------------------------------------------------
+    user_mode, max_notes = prompt_phase_0_5()
+
+    print()
+    print(f"✅ 模式选择: {user_mode}")
+    print(f"✅ 爬取数量: {max_notes} 条")
+
+    # ----------------------------------------------------------
     # Phase 1: 数据采集 — 目标博主
     # ----------------------------------------------------------
     crawl_cmd = [
         python, os.path.join(SCRIPTS_DIR, "crawl_blogger.py"),
         blogger, "-o", args.data_dir,
+        "--max-notes", str(max_notes),
     ]
     if args.keywords:
         crawl_cmd.extend(["--keywords", args.keywords])
@@ -110,15 +173,14 @@ def main():
         self_crawl_cmd = [
             python, os.path.join(SCRIPTS_DIR, "crawl_blogger.py"),
             args.self_blogger, "--self", "-o", args.data_dir,
+            "--max-notes", str(max_notes),
         ]
         run_phase("Phase 1: 数据采集 — 自己账号", self_crawl_cmd)
 
     # ----------------------------------------------------------
-    # Phase 2: 数据分析
+    # Phase 2: 数据分析 + 认知层提取
     # ----------------------------------------------------------
-    # 构造笔记详情文件路径（crawl_blogger.py 的输出命名规则）
-    from scripts.utils.common import safe_filename as _safe
-    blogger_safe = _safe(blogger)
+    blogger_safe = safe_filename(blogger)
     details_file = os.path.join(args.data_dir, f"{blogger_safe}_notes_details.json")
 
     if not os.path.isfile(details_file):
@@ -131,17 +193,17 @@ def main():
         details_file, "-o", args.data_dir,
     ]
     if args.self_blogger:
-        self_safe = _safe(args.self_blogger)
+        self_safe = safe_filename(args.self_blogger)
         self_details = os.path.join(args.data_dir, f"{self_safe}_notes_details.json")
         if os.path.isfile(self_details):
             analyze_cmd.extend(["--self", self_details])
         else:
             print(f"\n⚠️  自己账号的笔记详情未找到 ({self_details})，跳过对比分析")
 
-    run_phase("Phase 2: 数据分析", analyze_cmd)
+    run_phase("Phase 2: 数据分析 + 认知层提取", analyze_cmd)
 
     # ----------------------------------------------------------
-    # Phase 3: 文档生成
+    # Phase 3: 蒸馏 + 产出物生成（Step A）
     # ----------------------------------------------------------
     analysis_file = os.path.join(args.data_dir, f"{blogger_safe}_analysis.json")
 
@@ -150,41 +212,42 @@ def main():
         print("   Phase 2 可能未正确完成，请检查数据目录。")
         sys.exit(1)
 
-    gendocs_cmd = [
-        python, os.path.join(SCRIPTS_DIR, "generate_docs.py"),
-        analysis_file, blogger,
-        "-o", args.output_dir,
-        "--details", details_file,
-    ]
-
-    run_phase("Phase 3: 文档生成", gendocs_cmd)
-
-    # ----------------------------------------------------------
-    # Phase 3.5: AI 深度分析（增强版文档）
-    # ----------------------------------------------------------
     deep_cmd = [
         python, os.path.join(SCRIPTS_DIR, "deep_analyze.py"),
         analysis_file, blogger,
         "-o", args.output_dir,
         "--details", details_file,
+        "--mode", user_mode,
     ]
 
-    run_phase("Phase 3.5: AI 深度分析", deep_cmd)
+    run_phase("Phase 3: 蒸馏 + 产出物生成（Step A）", deep_cmd)
 
     # ----------------------------------------------------------
     # 完成
     # ----------------------------------------------------------
     print()
     print("=" * 60)
-    print("🎉 全部完成！")
-    print(f"   文档输出目录: {os.path.abspath(args.output_dir)}")
+    print("🎉 Step A 已完成！")
+    print(f"   产出目录: {os.path.abspath(args.output_dir)}")
     print("=" * 60)
     print()
-    print("生成的文档：")
-    if os.path.isdir(args.output_dir):
-        for f in sorted(os.listdir(args.output_dir)):
-            if f.endswith(".docx"):
-                print(f"  📄 {f}")
+
+    task_path = os.path.join(
+        args.output_dir,
+        "_过程文件",
+        "原始素材",
+        f"{blogger_safe}_AI蒸馏任务.md",
+    )
+
+    if user_mode == "A":
+        expected_skill = f"{blogger_safe}_创作指南.skill/SKILL.md"
+    else:
+        expected_skill = f"{blogger_safe}_创作基因.skill/SKILL.md"
+
+    print("接下来由宿主 AI 读取 AI蒸馏任务，继续完成最终产物：")
+    print(f"  📋 AI蒸馏任务: {task_path}")
+    print(f"  🌐 HTML 报告: {blogger_safe}_蒸馏报告.html")
+    print(f"  🧠 Skill 文件夹: {expected_skill}")
     print()
 
     # === V7 垃圾文件检测（自动运行）===

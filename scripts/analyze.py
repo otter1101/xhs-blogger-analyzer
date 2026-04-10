@@ -225,10 +225,17 @@ def analyze_notes(details_path, self_details_path=None):
     # 解析笔记数据
     notes = []
     errors = []
-    
+    restricted_notes = []  # 内容获取受限的笔记（保留标题供选题分析参考）
+
     for item in raw_details:
         if "_error" in item:
             errors.append(item)
+            if item.get("_content_restricted"):
+                restricted_notes.append({
+                    "id": item.get("_feed_id", ""),
+                    "title": item.get("_title", ""),
+                    "restricted": True,
+                })
             continue
         
         # 兼容两种数据格式
@@ -277,6 +284,7 @@ def analyze_notes(details_path, self_details_path=None):
     stats = {
         "total": total,
         "errors": len(errors),
+        "restricted": len(restricted_notes),
         "video_count": video_count,
         "normal_count": normal_count,
         "total_likes": total_likes,
@@ -353,6 +361,7 @@ def analyze_notes(details_path, self_details_path=None):
         "top10": top10,
         "comparison": comparison,
         "errors": errors,
+        "restricted_notes": restricted_notes,
         "opinion_candidates": opinion_candidates,
         "opinion_extraction_mode": opinion_mode,
         "writing_structure": writing_structure,
@@ -380,7 +389,7 @@ if __name__ == "__main__":
     # 打印摘要
     s = result["stats"]
     print(f"\n{'='*60}")
-    print(f"  总计: {s['total']}条 | 视频:{s['video_count']} 图文:{s['normal_count']} | 失败:{s['errors']}")
+    print(f"  总计: {s['total']}条 | 视频:{s['video_count']} 图文:{s['normal_count']} | 失败:{s['errors']} | 受限(仅标题):{s.get('restricted', 0)}")
     print(f"  总赞: {s['total_likes']:,} | 总收藏: {s['total_collects']:,} | 总评论: {s['total_comments']:,}")
     print(f"  均赞: {s['avg_likes']:,} | 均收藏: {s['avg_collects']:,} | 均评论: {s['avg_comments']:,}")
     

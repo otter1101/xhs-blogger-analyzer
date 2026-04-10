@@ -9,7 +9,7 @@
         --expected-count 50 \
         --profile ./data/博主名_profile.json \
         --output-dir ./output \
-        --expected-files 博主名_博主深度拆解.docx 博主名_内容公式总结.docx
+        --expected-files 博主名_蒸馏报告.html 博主名_创作指南.skill/SKILL.md
 """
 
 import json
@@ -165,6 +165,7 @@ def get_sample_watermark(details, profile=None):
 def check_output_files(output_dir, expected_files):
     """
     检查产出文件是否存在且非空。
+    expected_files 支持嵌套路径，例如 `灵均Kikky_创作指南.skill/SKILL.md`。
     返回 (ok: bool, message: str)
     """
     if not output_dir or not expected_files:
@@ -188,6 +189,23 @@ def check_output_files(output_dir, expected_files):
             f"🚨 ERROR — 缺失或为空: {', '.join(issues)}",
         )
     return True, f"[V6] 产出文件数: {total}/{total} ✅"
+
+
+def build_expected_output_files(nickname, mode="A"):
+    """
+    根据模式生成 V6 的预期产出文件列表。
+    mode="A"：HTML + 创作指南 skill 文件夹入口
+    mode="B"：HTML + 创作基因 skill 文件夹入口
+    """
+    if mode == "B":
+        skill_entry = f"{nickname}_创作基因.skill/SKILL.md"
+    else:
+        skill_entry = f"{nickname}_创作指南.skill/SKILL.md"
+
+    return [
+        f"{nickname}_蒸馏报告.html",
+        skill_entry,
+    ]
 
 
 # ==========================================

@@ -177,8 +177,8 @@ def search_supplement(client, keyword, user_id, existing_notes, extra_keywords=N
             print(f"  '{kw}' 出错: {e}")
             time.sleep(2)
 
-        if len(existing_notes) >= max_notes:
-            print(f"  已达 {max_notes} 条上限，停止搜索补充")
+        if len(existing_notes) >= max_notes + 10:
+            print(f"  已达 {max_notes + 10} 条缓冲上限，停止搜索补充")
             break
 
     print(f"  共新增 {new_total} 条，总计 {len(existing_notes)} 条")
@@ -247,8 +247,8 @@ def get_all_details(client, notes_dict, output_dir, blogger_name):
             # 检测笔记是否已删除/隐藏（MCP 返回 not found）
             raw_text = detail.get("_raw_text", "")
             if "not found" in raw_text or "获取Feed详情失败" in raw_text:
-                print(f" ⚠️ 笔记已删除或隐藏")
-                details.append({"_feed_id": nid, "_error": "笔记已删除或隐藏", "_title": note.get("title"), "_deleted": True})
+                print(f" ⚠️ 内容获取受限（API限制，非删除）")
+                details.append({"_feed_id": nid, "_error": "笔记内容获取受限（API限制，非删除）", "_title": note.get("title"), "_content_restricted": True})
                 err_count += 1
             else:
                 # 按热度排序评论（likeCount 降序）
@@ -347,11 +347,12 @@ def crawl_blogger(keyword=None, user_id=None, output_dir=None, port=18060, is_se
     # 搜索补充
     notes = search_supplement(client, keyword or nickname, user_id, notes, extra_keywords, max_notes=max_notes)
 
-    # 🔒 硬上限截断：按赞数排序后取前 max_notes 条
-    if len(notes) > max_notes:
+    # 🔒 硬上限截断：按赞数排序后取前 max_notes+10 条（含10条缓冲，应对详情获取失败）
+    buffer = max_notes + 10
+    if len(notes) > buffer:
         sorted_notes = sorted(notes.values(), key=lambda x: x.get("likedCount", 0), reverse=True)
-        notes = {n["id"]: n for n in sorted_notes[:max_notes]}
-        print(f"\n⚙️ 已截断至 {max_notes} 条（原 {len(sorted_notes)} 条，按赞数取 TOP{max_notes}）")
+        notes = {n["id"]: n for n in sorted_notes[:buffer]}
+        print(f"\n⚙️ 已截断至 {buffer} 条（原 {len(sorted_notes)} 条，含10条缓冲）")
 
     # 保存笔记列表
     notes_list = sorted(notes.values(), key=lambda x: x.get("likedCount", 0), reverse=True)
@@ -374,10 +375,10 @@ def crawl_blogger(keyword=None, user_id=None, output_dir=None, port=18060, is_se
         json.dump(details, f, ensure_ascii=False, indent=2)
     
     ok_count = len([d for d in details if "_error" not in d])
-    deleted_count = len([d for d in details if d.get("_deleted")])
+    restricted_count = len([d for d in details if d.get("_content_restricted")])
     print(f"\n💾 笔记详情: {details_path} ({ok_count}条有效)")
-    if deleted_count > 0:
-        print(f"   ⚠️ {deleted_count} 条笔记已被博主删除或隐藏，无法获取内容")
+    if restricted_count > 0:
+        print(f"   ⚠️ {restricted_count} 条笔记内容获取受限（API限制，非删除），标题已保留供分析参考")
 
     # === 数据校验（自动运行，不依赖 AI 调用）===
     print("\n" + "=" * 60)
