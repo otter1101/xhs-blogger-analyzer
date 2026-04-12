@@ -42,13 +42,13 @@ class MCPClient:
         self.port = int(port or os.environ.get("XHS_MCP_PORT", DEFAULT_PORT))
         self.timeout = timeout or DEFAULT_TIMEOUT
         self.base_url = f"http://{self.host}:{self.port}/mcp"
+        self._session_id = None  # 缓存 session，同一生命周期内复用
 
     # ----------------------------------------------------------
-    # 核心：三步调用协议
+    # 核心：握手 + 调用协议
     # ----------------------------------------------------------
-    def _raw_call(self, tool_name, tool_args, timeout=None):
-        """执行一次完整的 init → notify → call 三步调用"""
-        timeout = timeout or self.timeout
+    def _init_session(self):
+        """执行 init → notify 两步握手，将 session_id 缓存到 self._session_id"""
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
@@ -65,7 +65,6 @@ class MCPClient:
                 "clientInfo": CLIENT_INFO,
             },
         }).encode()
-
         req1 = urllib.request.Request(self.base_url, data=init_payload, headers=headers)
         resp1 = urllib.request.urlopen(req1, timeout=30)
         session_id = resp1.headers.get("Mcp-Session-Id", "")
@@ -81,7 +80,21 @@ class MCPClient:
         req2 = urllib.request.Request(self.base_url, data=notify_payload, headers=headers, method="POST")
         urllib.request.urlopen(req2, timeout=30)
 
-        # Step 3: Tool call
+        self._session_id = session_id
+
+    def _raw_call(self, tool_name, tool_args, timeout=None):
+        """复用已有 session 直接发 tools/call；session 不存在或过期时自动重新握手"""
+        timeout = timeout or self.timeout
+
+        if not self._session_id:
+            self._init_session()
+
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "Mcp-Session-Id": self._session_id,
+        }
+
         call_payload = json.dumps({
             "jsonrpc": "2.0",
             "id": 2,
@@ -91,9 +104,20 @@ class MCPClient:
                 "arguments": tool_args or {},
             },
         }).encode()
-        req3 = urllib.request.Request(self.base_url, data=call_payload, headers=headers, method="POST")
-        resp3 = urllib.request.urlopen(req3, timeout=timeout)
-        return json.loads(resp3.read().decode())
+
+        req = urllib.request.Request(self.base_url, data=call_payload, headers=headers, method="POST")
+        try:
+            resp = urllib.request.urlopen(req, timeout=timeout)
+            return json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            if e.code in (404, 410):  # session 过期或不存在，重新握手后重试一次
+                self._session_id = None
+                self._init_session()
+                headers["Mcp-Session-Id"] = self._session_id
+                req2 = urllib.request.Request(self.base_url, data=call_payload, headers=headers, method="POST")
+                resp2 = urllib.request.urlopen(req2, timeout=timeout)
+                return json.loads(resp2.read().decode())
+            raise
 
     # ----------------------------------------------------------
     # 公开 API
