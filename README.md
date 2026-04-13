@@ -171,7 +171,9 @@ blogger-distiller/
 │       ├── mcp_client.py     # MCP HTTP 客户端（纯 urllib）
 │       └── common.py         # 共用工具函数
 └── references/
-    └── 产出物质量标杆.md
+    ├── 产出物质量标杆.md
+    └── 张咋啦_创作指南.skill/   # 示例：可直接安装使用的创作指南 Skill
+        └── SKILL.md
 ```
 
 ---
