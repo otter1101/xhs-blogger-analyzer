@@ -496,6 +496,49 @@ def download_mcp_binary():
 
 
 # ----------------------------------------------------------
+# 检测本机 Chrome 路径（供 Rod 使用）
+# ----------------------------------------------------------
+def _find_chrome_path():
+    """
+    按优先级检测本机 Chrome 可执行文件路径。
+    找到返回路径字符串，找不到返回 None。
+    Rod 通过 ROD 环境变量的 bin= 字段接受此路径。
+    """
+    system = platform.system()
+
+    if system == "Darwin":
+        candidates = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+            os.path.expanduser(
+                "~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+            ),
+        ]
+    elif system == "Windows":
+        candidates = [
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            os.path.expandvars(
+                r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"
+            ),
+        ]
+    else:  # Linux
+        candidates = [
+            "/usr/bin/google-chrome",
+            "/usr/bin/google-chrome-stable",
+            "/usr/bin/chromium-browser",
+            "/usr/bin/chromium",
+        ]
+
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+
+    # 最后尝试 PATH 里有没有
+    return shutil.which("google-chrome") or shutil.which("chromium") or shutil.which("chrome")
+
+
+# ----------------------------------------------------------
 # 自动启动 MCP 服务
 # ----------------------------------------------------------
 def start_mcp_service(binary_path):
@@ -504,6 +547,15 @@ def start_mcp_service(binary_path):
     返回 (ok, message)
     """
     try:
+        # 继承当前环境，并尝试注入 Chrome 路径给 Rod
+        env = os.environ.copy()
+        chrome_path = _find_chrome_path()
+        if chrome_path:
+            env["ROD"] = f"bin={chrome_path}"
+            print(f"     🌐 检测到 Chrome: {chrome_path}")
+        else:
+            print(f"     ⚠️  未检测到 Chrome，Rod 将使用默认路径（如遇登录卡住请安装 Chrome）")
+
         system = platform.system()
         if system == "Windows":
             # Windows: 使用 subprocess.CREATE_NEW_PROCESS_GROUP 在后台启动
@@ -511,6 +563,7 @@ def start_mcp_service(binary_path):
                 [binary_path],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                env=env,
                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
             )
         else:
@@ -519,6 +572,7 @@ def start_mcp_service(binary_path):
                 [binary_path],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                env=env,
                 start_new_session=True,
             )
 

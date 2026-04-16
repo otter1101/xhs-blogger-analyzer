@@ -24,7 +24,7 @@ from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.common import safe_filename, parse_count
-from utils.md_to_docx import md_to_docx
+
 from verify import check_content_completeness, check_output_files
 
 
@@ -1964,26 +1964,14 @@ def deep_analyze(analysis_path, nickname, output_dir, notes_details_path=None, m
     process_dir = os.path.join(output_dir, "_过程文件", "原始素材")
     os.makedirs(process_dir, exist_ok=True)
 
-    results = []
     for doc_type, md_content in docs.items():
         md_name = f"{safe_name}_{doc_type}.md"
-        docx_name = f"{safe_name}_{doc_type}.docx"
 
         # MD → 过程文件
         md_path = os.path.join(process_dir, md_name)
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(md_content)
-
-        # DOCX → 根目录
-        docx_path = os.path.join(output_dir, docx_name)
-        try:
-            md_to_docx(md_path, docx_path)
-            size_kb = os.path.getsize(docx_path) / 1024
-            print(f"  ✅ {docx_name} ({size_kb:.0f}KB)")
-            results.append({"name": docx_name, "path": docx_path, "size_kb": size_kb, "ok": True})
-        except Exception as e:
-            print(f"  ❌ {docx_name}: {e}")
-            results.append({"name": docx_name, "path": docx_path, "ok": False, "error": str(e)})
+        print(f"  📄 {md_name}")
 
     # ---- 生成 AI蒸馏任务 ----
     task_content = gen_distill_task(
@@ -1999,15 +1987,15 @@ def deep_analyze(analysis_path, nickname, output_dir, notes_details_path=None, m
         f.write(task_content)
     print(f"  📋 AI蒸馏任务: {task_path}")
 
-    # === V6 产出文件数校验（自动运行）===
-    expected_files = [r["name"] for r in results] + [task_rel_path]
+    # === 产出文件校验 ===
+    expected_files = [task_rel_path]
     v6_ok, v6_msg = check_output_files(output_dir, expected_files)
     print(v6_msg)
     if not v6_ok:
         print("\n🚨 产出文件不完整，请检查上方错误信息并重试。")
         sys.exit(1)
 
-    return {"docs": results, "task_path": task_path}
+    return {"task_path": task_path}
 
 
 # ----------------------------------------------------------
