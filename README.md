@@ -201,10 +201,10 @@ MIT License
 欢迎各位在这个skill的右上方点一个🌟！！！
 有任何问题，欢迎进群讨论～
 
-<img src="https://github.com/user-attachments/assets/d2ee0a37-8971-4750-90ee-abfa47fac92c" width="260"/>
 
-<img src="https://github.com/user-attachments/assets/d065d0be-9926-4e4f-a14f-6ead7621cf72" width="260"/>
 
+<img width="966" height="1482" alt="92fb4cce4c546530f80c8b04d53695f2" src="https://github.com/user-attachments/assets/5d9fc8af-185d-4f80-908b-58d289aef29a" />
+<img width="966" height="1482" alt="92fb4cce4c546530f80c8b04d53695f2" src="https://github.com/user-attachments/assets/493b361c-2eff-4ed1-88ca-96aed399abf1" />
 
 
 </div>
