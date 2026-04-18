@@ -213,3 +213,5 @@ MIT License
 </table>
 
 </div>
+
+注：本skill仅供学习，切勿频繁爬取。
