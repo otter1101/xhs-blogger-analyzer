@@ -199,19 +199,5 @@ MIT License
 **让 AI 帮你蒸馏出优秀者的思维方式，变成你自己的创作武器**
 
 欢迎各位在这个skill的右上方点一个🌟！！！
-有任何问题，欢迎进群讨论～
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="https://github.com/user-attachments/assets/bc3cf116-c9e2-4fba-8b88-920273344cc0" alt="交流群二维码 1" width="190"/>
-    </td>
-    <td align="center">
-      <img src="https://github.com/user-attachments/assets/b7aac887-222e-4397-bf31-e452ed6f79ec" alt="交流群二维码 2" width="190"/>
-    </td>
-  </tr>
-</table>
-
-</div>
-
-免责声明：本skill仅供学习，获取碎片化笔记内容，切勿频繁爬取，强烈建议用小号登录操作。
+免责声明：本skill仅供学习，获取碎片化笔记内容，切勿频繁爬取和做非法牟利。
