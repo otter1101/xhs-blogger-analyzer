@@ -1,0 +1,247 @@
+{
+  "_comment": "TikHub 端点池配置 — 每个 pool 至少 3 条链路确保冗余。优先级基于实测可用性动态调整。",
+  "version": "1.5",
+  "last_updated": "2026-04-23",
+  "_priority_note": "2026-04-23 v1.5: 实测 web_v2 全线 400，app 旧Token可用新Token不行，web_v3 两个Token都200。调整所有池优先级为 web_v3 → app → web_v2 → app_v2。已切回旧Token(1JBb)。",
+
+  "pools": {
+    "search_notes": [
+      {
+        "group": "web_v3",
+        "path": "/api/v1/xiaohongshu/web_v3/fetch_search_notes",
+        "method": "GET",
+        "params": {"keyword": "${keyword}", "page": "${page}", "sort": "general", "note_type": 0, "num": 20},
+        "adapter": "search_notes_web_v3",
+        "_note": "2026-04-23 实测200，两个Token都通，提为首选"
+      },
+      {
+        "group": "app",
+        "path": "/api/v1/xiaohongshu/app/search_notes",
+        "method": "GET",
+        "params": {"keyword": "${keyword}", "page": "${page}"},
+        "adapter": "search_notes_app",
+        "_note": "2026-04-23 旧Token(1JBb)返回200"
+      },
+      {
+        "group": "web_v2",
+        "path": "/api/v1/xiaohongshu/web_v2/fetch_search_notes",
+        "method": "GET",
+        "params": {"keywords": "${keyword}", "page": "${page}", "sort_type": "general", "note_type": 0},
+        "adapter": "search_notes_web_v2",
+        "_note": "2026-04-23 实测400，降为备选"
+      },
+      {
+        "group": "app_v2",
+        "path": "/api/v1/xiaohongshu/app_v2/search_notes",
+        "method": "GET",
+        "params": {"keyword": "${keyword}", "page": "${page}"},
+        "adapter": "search_notes_app_v2",
+        "_note": "长期400，末位兜底"
+      }
+    ],
+
+    "search_users": [
+      {
+        "group": "web_v3",
+        "path": "/api/v1/xiaohongshu/web_v3/fetch_search_users",
+        "method": "GET",
+        "params": {"keyword": "${keyword}", "page": "${page}"},
+        "adapter": "search_users_web_v3",
+        "_note": "2026-04-23 提为首选"
+      },
+      {
+        "group": "app",
+        "path": "/api/v1/xiaohongshu/app/search_users",
+        "method": "GET",
+        "params": {"keyword": "${keyword}", "page": "${page}"},
+        "adapter": "search_users_app",
+        "_note": "旧Token可用"
+      },
+      {
+        "group": "web_v2",
+        "path": "/api/v1/xiaohongshu/web_v2/fetch_search_users",
+        "method": "GET",
+        "params": {"keywords": "${keyword}", "page": "${page}"},
+        "adapter": "search_users_web_v2",
+        "_note": "2026-04-23 实测400，降为备选"
+      },
+      {
+        "group": "app_v2",
+        "path": "/api/v1/xiaohongshu/app_v2/search_users",
+        "method": "GET",
+        "params": {"keyword": "${keyword}", "page": "${page}"},
+        "adapter": "search_users_app_v2"
+      }
+    ],
+
+    "fetch_user_info": [
+      {
+        "group": "web_v3",
+        "path": "/api/v1/xiaohongshu/web_v3/fetch_user_info",
+        "method": "GET",
+        "params": {"user_id": "${user_id}"},
+        "adapter": "user_info_web_v3",
+        "_note": "2026-04-23 提为首选"
+      },
+      {
+        "group": "app",
+        "path": "/api/v1/xiaohongshu/app/get_user_info",
+        "method": "GET",
+        "params": {"user_id": "${user_id}"},
+        "adapter": "user_info_app"
+      },
+      {
+        "group": "web_v2",
+        "path": "/api/v1/xiaohongshu/web_v2/fetch_user_info",
+        "method": "GET",
+        "params": {"user_id": "${user_id}"},
+        "adapter": "user_info_web_v2",
+        "_note": "2026-04-23 实测400，降为备选"
+      },
+      {
+        "group": "app_v2",
+        "path": "/api/v1/xiaohongshu/app_v2/get_user_info",
+        "method": "GET",
+        "params": {"user_id": "${user_id}"},
+        "adapter": "user_info_app_v2"
+      }
+    ],
+
+    "fetch_user_notes": [
+      {
+        "group": "web_v3",
+        "path": "/api/v1/xiaohongshu/web_v3/fetch_user_notes",
+        "method": "GET",
+        "params": {"user_id": "${user_id}", "cursor": "${cursor}", "num": 20},
+        "adapter": "user_notes_web_v3",
+        "_note": "2026-04-23 提为首选"
+      },
+      {
+        "group": "app",
+        "path": "/api/v1/xiaohongshu/app/get_user_notes",
+        "method": "GET",
+        "params": {"user_id": "${user_id}", "cursor": "${cursor}"},
+        "adapter": "user_notes_app"
+      },
+      {
+        "group": "web_v2",
+        "path": "/api/v1/xiaohongshu/web_v2/fetch_home_notes",
+        "method": "GET",
+        "params": {"user_id": "${user_id}", "cursor": "${cursor}"},
+        "adapter": "user_notes_web_v2",
+        "_note": "2026-04-23 实测400，降为备选"
+      },
+      {
+        "group": "app_v2",
+        "path": "/api/v1/xiaohongshu/app_v2/get_user_posted_notes",
+        "method": "GET",
+        "params": {"user_id": "${user_id}", "cursor": "${cursor}"},
+        "adapter": "user_notes_app_v2"
+      }
+    ],
+
+    "fetch_note_detail_image": [
+      {
+        "group": "app",
+        "path": "/api/v1/xiaohongshu/app/get_note_info",
+        "method": "GET",
+        "params": {"note_id": "${note_id}"},
+        "adapter": "note_detail_app",
+        "_note": "2026-04-23 旧Token实测200，完整互动数据+视频信息，保持首选"
+      },
+      {
+        "group": "web_v3",
+        "path": "/api/v1/xiaohongshu/web_v3/fetch_note_detail",
+        "method": "GET",
+        "params": {"note_id": "${note_id}", "xsec_token": "${xsec_token}"},
+        "adapter": "note_detail_web_v3",
+        "_note": "需要 xsec_token，作为备选"
+      },
+      {
+        "group": "web_v2",
+        "path": "/api/v1/xiaohongshu/web_v2/fetch_feed_notes_v2",
+        "method": "GET",
+        "params": {"note_id": "${note_id}"},
+        "adapter": "note_detail_web_v2",
+        "_note": "2026-04-23 实测400，降为备选"
+      },
+      {
+        "group": "app_v2",
+        "path": "/api/v1/xiaohongshu/app_v2/get_image_note_detail",
+        "method": "GET",
+        "params": {"note_id": "${note_id}"},
+        "adapter": "note_detail_app_v2",
+        "_note": "长期400，末位兜底"
+      }
+    ],
+
+    "fetch_note_detail_video": [
+      {
+        "group": "app",
+        "path": "/api/v1/xiaohongshu/app/get_note_info",
+        "method": "GET",
+        "params": {"note_id": "${note_id}"},
+        "adapter": "note_detail_app",
+        "_note": "2026-04-23 旧Token实测200，完整互动数据+视频URL，保持首选"
+      },
+      {
+        "group": "web_v3",
+        "path": "/api/v1/xiaohongshu/web_v3/fetch_note_detail",
+        "method": "GET",
+        "params": {"note_id": "${note_id}", "xsec_token": "${xsec_token}"},
+        "adapter": "note_detail_web_v3",
+        "_note": "需要 xsec_token，作为备选"
+      },
+      {
+        "group": "web_v2",
+        "path": "/api/v1/xiaohongshu/web_v2/fetch_feed_notes_v2",
+        "method": "GET",
+        "params": {"note_id": "${note_id}"},
+        "adapter": "note_detail_web_v2",
+        "_note": "2026-04-23 实测400，降为备选"
+      },
+      {
+        "group": "app_v2",
+        "path": "/api/v1/xiaohongshu/app_v2/get_video_note_detail",
+        "method": "GET",
+        "params": {"note_id": "${note_id}"},
+        "adapter": "note_detail_app_v2",
+        "_note": "长期400，末位兜底"
+      }
+    ],
+
+    "fetch_note_comments": [
+      {
+        "group": "app",
+        "path": "/api/v1/xiaohongshu/app/get_note_comments",
+        "method": "GET",
+        "params": {"note_id": "${note_id}", "start": "${cursor}"},
+        "adapter": "note_comments_app",
+        "_note": "2026-04-23: app 评论端点旧Token稳定，保持首选"
+      },
+      {
+        "group": "web_v3",
+        "path": "/api/v1/xiaohongshu/web_v3/fetch_note_comments",
+        "method": "GET",
+        "params": {"note_id": "${note_id}", "cursor": "${cursor}"},
+        "adapter": "note_comments_web_v3",
+        "_note": "提为第二选择"
+      },
+      {
+        "group": "app_v2",
+        "path": "/api/v1/xiaohongshu/app_v2/get_note_comments",
+        "method": "GET",
+        "params": {"note_id": "${note_id}", "cursor": "${cursor}"},
+        "adapter": "note_comments_app_v2"
+      },
+      {
+        "group": "web_v2",
+        "path": "/api/v1/xiaohongshu/web_v2/fetch_note_comments",
+        "method": "GET",
+        "params": {"note_id": "${note_id}", "cursor": "${cursor}"},
+        "adapter": "note_comments_web_v2",
+        "_note": "2026-04-23 实测400，降为末位"
+      }
+    ]
+  }
+}

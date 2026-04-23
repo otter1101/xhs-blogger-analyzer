@@ -22,6 +22,7 @@ sys.path.insert(0, SCRIPTS_DIR)
 
 from verify import check_junk_files
 from utils.common import safe_filename
+from utils.first_run import ensure_first_run_ack
 
 
 MODE_OPTIONS = {"A", "B"}
@@ -55,25 +56,25 @@ def prompt_phase_0_5():
     print("🎯 欢迎使用博主蒸馏器！")
     print()
     print("  ⚠️  ═══════════════════════════════════════════════════")
-    print("  ⚠️  安全提示：")
-    print("  ⚠️  1. 建议使用小红书【小号】登录，切勿使用主力账号")
-    print("  ⚠️  2. 切勿频繁爬取，以免触发风控导致封号")
-    print("  ⚠️  3. 本 Skill 正在进行安全升级，请注意使用风险")
+    print("  ⚠️  使用提示：")
+    print("  ⚠️  1. 数据通过 TikHub API 获取，需确保 Token 有效且额度充足")
+    print("  ⚠️  2. 可在 https://user.tikhub.io 查看剩余额度")
+    print("  ⚠️  3. 每次采集约消耗 0.5-2 元额度（取决于采集数量）")
     print("  ⚠️  ═══════════════════════════════════════════════════")
     print()
     print("请选择分析模式：")
     print()
     print("  🔍 A — 拆解对标博主")
-    print("     爬取 TA 的笔记 → 提炼内容公式和思维方式")
+    print("     采集 TA 的笔记 → 提炼内容公式和思维方式")
     print("     → 生成「TA的名字_创作指南.skill/」")
     print("     以后写内容时加载它，相当于随时在线的内容教练")
     print()
     print("  🪞 B — 诊断我的账号")
-    print("     爬取你的笔记 → 找到内容基因和增长瓶颈")
+    print("     采集你的笔记 → 找到内容基因和增长瓶颈")
     print("     → 生成「你的名字_创作基因.skill/」")
     print("     让 AI 写出的内容像你自己写的，无缝嵌入创作工作流")
     print()
-    print("  ⚡ C — 对标 + 借鉴（暂未开放，v2.1 支持）")
+    print("  ⚡ C — 对标 + 借鉴（暂未开放）")
     print()
 
     while True:
@@ -86,7 +87,7 @@ def prompt_phase_0_5():
             print("请输入 A 或 B。")
 
     print()
-    print("📊 爬取数量（推荐 50 条）：")
+    print("📊 采集数量（推荐 50 条）：")
     print("  ① 30 条 — 快速扫描（约 15-25 分钟）")
     print("  ② 50 条 — 推荐档位（约 30-45 分钟）")
     print("  ③ 80 条 — 深度分析（约 45-65 分钟）")
@@ -121,11 +122,17 @@ def main():
     parser.add_argument("--self", dest="self_blogger", help="自己的博主名称（用于额外对比分析）")
     parser.add_argument("--keywords", help="领域关键词（逗号分隔），用于扩展搜索")
     parser.add_argument("--skip-env", action="store_true", help="跳过 Phase 0 环境检查")
-    parser.add_argument("--port", type=int, default=18060, help="MCP 服务端口（默认 18060）")
+    parser.add_argument("--token", help="TikHub API Token（也可用环境变量 TIKHUB_API_TOKEN）")
     parser.add_argument("--data-dir", default="./data", help="数据存放目录（默认 ./data）")
     parser.add_argument("--output-dir", default="./output", help="产出目录（默认 ./output）")
 
     args = parser.parse_args()
+
+    # ----------------------------------------------------------
+    # 合规改造 v2.0：首次运行横幅（仅首次展示，后续无感）
+    # 标记文件：data/.first_run_ack  删除此文件即可重置
+    # ----------------------------------------------------------
+    ensure_first_run_ack()
 
     blogger = args.blogger
     python = sys.executable
@@ -139,16 +146,20 @@ def main():
         print(f"   领域关键词: {args.keywords}")
     print(f"   数据目录: {args.data_dir}")
     print(f"   输出目录: {args.output_dir}")
-    print(f"   MCP 端口: {args.port}")
+    token_src = "命令行参数" if args.token else ("环境变量" if os.environ.get("TIKHUB_API_TOKEN") else "未设置")
+    print(f"   TikHub Token: {token_src}")
     print()
 
     # ----------------------------------------------------------
     # Phase 0: 环境自动准备
     # ----------------------------------------------------------
     if not args.skip_env:
+        env_cmd = [python, os.path.join(SCRIPTS_DIR, "check_env.py")]
+        if args.token:
+            env_cmd.extend(["--token", args.token])
         run_phase(
             "Phase 0: 环境自动准备",
-            [python, os.path.join(SCRIPTS_DIR, "check_env.py"), "--port", str(args.port)],
+            env_cmd,
         )
     else:
         print("\n⏭️  跳过 Phase 0（--skip-env）")
@@ -160,7 +171,7 @@ def main():
 
     print()
     print(f"✅ 模式选择: {user_mode}")
-    print(f"✅ 爬取数量: {max_notes} 条")
+    print(f"✅ 采集数量: {max_notes} 条")
 
     # ----------------------------------------------------------
     # Phase 1: 数据采集 — 目标博主
@@ -170,6 +181,8 @@ def main():
         blogger, "-o", args.data_dir,
         "--max-notes", str(max_notes),
     ]
+    if args.token:
+        crawl_cmd.extend(["--token", args.token])
     if args.keywords:
         crawl_cmd.extend(["--keywords", args.keywords])
 
@@ -182,6 +195,8 @@ def main():
             args.self_blogger, "--self", "-o", args.data_dir,
             "--max-notes", str(max_notes),
         ]
+        if args.token:
+            self_crawl_cmd.extend(["--token", args.token])
         run_phase("Phase 1: 数据采集 — 自己账号", self_crawl_cmd)
 
     # ----------------------------------------------------------

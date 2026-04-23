@@ -7,6 +7,8 @@ description: >
 
 # 博主蒸馏器
 
+> ⚠️ **使用前必读**：本工具仅供学习研究使用，通过 TikHub 公开 REST API 获取公开数据（不模拟登录、不注入 Cookie）。评论者身份默认脱敏（读者1 / 读者2 / 作者），评论正文保留用于研究。完整条款见 [DISCLAIMER.md](./DISCLAIMER.md) · 安全策略见 [SECURITY.md](./SECURITY.md)。
+
 ## 你是什么
 
 自动化的小红书博主蒸馏工具。**输入一个博主名字，输出两样最终产物：**
@@ -22,7 +24,7 @@ description: >
 
 ## 能力范围
 
-爬取目标博主笔记数据（支持 30 / 50 / 80 三档），三层蒸馏产出：
+采集目标博主笔记数据（支持 30 / 50 / 80 三档），三层蒸馏产出：
 
 ### 三层蒸馏结构
 
@@ -54,7 +56,7 @@ description: >
 ### 分工
 
 **脚本做 30%**（保下限）：
-- 环境检查、扫码登录、数据采集
+- 环境检查、TikHub Token 验证、数据采集
 - 统计分析（11种标题模式、6类CTA、藏赞比、发布频率）
 - 认知层粗提取（观点句候选、思维模式统计、价值词）
 - 数据底稿 + AI 蒸馏任务生成
@@ -69,14 +71,35 @@ description: >
 
 ## 前置要求
 
-- 需要本地桌面环境（支持显示图片或打开文件）
-- 云端/无头服务器暂不支持（无法完成扫码登录）
-- Python 3.8+（Skill 会自动检测，如未安装会提示）
-- 网络连接（用于下载 MCP 二进制和爬取小红书数据）
+- Python 3.10+（Skill 会自动检测，如未安装会提示）
+- TikHub API Token（注册地址: https://user.tikhub.io）
+- 网络连接（用于访问 TikHub API: api.tikhub.io）
+- **不需要**本地桌面环境，云端/无头服务器也可以运行
+
+### Token 获取与存储
+
+**⚠️ 首次运行时，必须在进入 Phase 0.5 前提醒用户：**
+
+> 本工具需要 TikHub API Token 才能运行。如果你还没有，请按以下步骤操作：
+> 1. 访问 https://user.tikhub.io 注册账号
+> 2. 充值（按量付费即可）
+> 3. **在控制台 → API 权限中，一键勾选全部小红书（xiaohongshu）相关端点**（开得越全，自动容错能力越强）
+> 4. 生成 API Token
+
+**密钥存储：** 用户提供 Token 后，系统会自动保存到 `~/.xiaohongshu/tikhub_config.json`，下次运行无需重复输入。Token 三级加载优先级：
+
+1. 环境变量 `TIKHUB_API_TOKEN`
+2. 配置文件 `~/.xiaohongshu/tikhub_config.json`（自动保存）
+3. 交互式输入（首次使用时引导，输入后自动保存到配置文件）
+
+设置方式（三选一）：
+- 环境变量: `set TIKHUB_API_TOKEN=你的token`（Windows）/ `export TIKHUB_API_TOKEN=你的token`（macOS/Linux）
+- 配置文件: 首次运行 `check_env.py` 时会交互式引导，自动保存
+- 命令行参数: `python run.py "博主名" --token 你的token`
 
 ### 代理设置
 
-如需通过代理访问 GitHub 或小红书，设置环境变量：
+如需通过代理访问 TikHub API，设置环境变量：
 
 ```bash
 # Windows
@@ -98,26 +121,13 @@ export HTTPS_PROXY="http://127.0.0.1:7890"
 
 自动检查并修复以下依赖：
 
-1. **python-docx** — 检测到未安装时自动 `pip install`（沿用现有环境准备逻辑）
-2. **xiaohongshu-mcp 二进制** — 检测到未安装时自动从 GitHub Releases 下载最新版到 `~/.xiaohongshu/bin/`
-3. **MCP 服务** — 检测到未运行时自动后台启动
-4. **小红书登录状态** — 检测到未登录时提示扫码登录
+1. **Python 版本** — 检测 Python 3.10+
+2. **python-docx** — 检测到未安装时自动 `pip install`
+3. **TikHub API Token** — 检测 Token 是否设置且有效
+   - 已设置 → 验证连通性，显示额度信息
+   - 未设置 → 交互式引导：提示注册 → 输入 Token → **自动保存到 `~/.xiaohongshu/tikhub_config.json`**
 
-> ⚠️ **安全提示**：建议使用小红书【小号】登录，切勿频繁爬取，以免触发风控导致封号。本 Skill 正在进行安全升级，请注意使用风险。
-
-**扫码登录详细流程：**
-
-1. 调用 `check_login_status` 检查登录状态
-2. 若已登录 → 跳到 Phase 0.5
-3. 若未登录：
-   a. 调用 `get_login_qrcode` 获取二维码（URL 或 base64 格式）
-   b. 展示策略（分级降级）：
-      - 尝试直接渲染二维码图片给用户
-      - 若失败，保存到桌面 `~/Desktop/xiaohongshu_qrcode.png` 并提示用户打开
-      - 若失败，输出二维码 URL 让用户在手机浏览器打开
-   c. 提示用户用手机小红书扫码
-   d. 每 3 秒轮询 `check_login_status`，超时 120 秒
-   e. 登录成功 → 继续；超时 → 报错退出
+> 💡 **额度提示**：每次完整蒸馏约消耗 ¥1～8（取决于笔记数量），可在 https://user.tikhub.io 查看剩余额度。
 
 ### Phase 0.5: 前置交互
 
@@ -130,20 +140,20 @@ export HTTPS_PROXY="http://127.0.0.1:7890"
 请选择分析模式：
 
    A — 拆解对标博主
-     爬取 TA 的笔记 → 提炼内容公式和思维方式
+     采集 TA 的笔记 → 提炼内容公式和思维方式
      → 生成「TA的名字_创作指南.skill/」
      以后写内容时加载它，相当于随时在线的内容教练
 
   B — 诊断我的账号
-     爬取你的笔记 → 找到内容基因和增长瓶颈
+     采集你的笔记 → 找到内容基因和增长瓶颈
      → 生成「你的名字_创作基因.skill/」
      让 AI 写出的内容像你自己写的，无缝嵌入创作工作流
 
-   C — 对标 + 借鉴（暂未开放，v2.1 支持）
+   C — 对标 + 借鉴（暂未开放）
 
 请输入 A 或 B：
 
-爬取数量（推荐 50 条）：
+采集数量（推荐 50 条）：
   ① 30 条 — 快速扫描（约 15-25 分钟）
   ② 50 条 — 推荐档位（约 30-45 分钟）
   ③ 80 条 — 深度分析（约 45-65 分钟）
@@ -162,17 +172,24 @@ export HTTPS_PROXY="http://127.0.0.1:7890"
 运行 `python scripts/crawl_blogger.py <博主名> -o ./data --max-notes <max_notes>`
 
 **⚠️ 重要约束（不得违反）：**
-- 必须逐条调用 `get_feed_detail` 获取笔记正文。仅有标题和互动数字的列表数据不足以做深度分析，正文、评论、标签都只能从 detail 接口获得。
+- 必须逐条调用 `fetch_note_detail` 获取笔记正文。仅有标题和互动数字的列表数据不足以做深度分析，正文、评论、标签都只能从 detail 接口获得。
 - 不得自行编写脚本替代 `scripts/crawl_blogger.py`，必须调用现有脚本。
 - 不得修改 `--max-notes` 参数的值，必须沿用用户在 Phase 0.5 选定的数量。
 
+**⚠️ 端点全部失败时的处理：**
+如果采集过程中出现"所有端点均失败"错误（尤其是 HTTP 402/403），**必须立即暂停并提醒用户**：
+
+> ⚠️ 所有 API 端点均返回失败。最常见的原因是 **TikHub 控制台的 API 权限未全部开通**。
+> 请登录 https://user.tikhub.io，进入控制台 → API 权限，**一键勾选全部小红书相关端点**，然后重新运行。
+> 如果权限已全部开通，请检查账户余额是否充足。
+
 自动完成：
 
-1. **搜索定位博主**（优先小红书号，否则按昵称精确匹配 → 昵称包含 → 出现频次）
-2. **获取主页信息** — 粉丝数、获赞数、笔记数、简介
-3. **获取主页笔记列表** — 从 `user_profile` 返回的 feeds 中提取
-4. **多关键词搜索补充** — 默认使用通用后缀（教程 / 推荐 / 分享 / 测评 / 攻略 / 合集），用户可通过 `--keywords` 指定领域词
-5. **逐条获取笔记详情** — 每条间隔 3 秒防风控
+1. **搜索定位博主**（首选 `search_users` 精准匹配 → 兜底 `search_notes` 交叉定位）
+2. **获取主页信息** — 粉丝数、获赞数、笔记数、简介（`fetch_user_info`）
+3. **获取主页笔记列表** — 分页获取用户全部笔记（`fetch_user_notes`）
+4. **多关键词搜索补充** — 默认使用通用后缀（教程 / 推荐 / 分享 / 测评 / 攻略 / 合集），用户可通过 `--keywords` 指定领域词（`search_notes`）
+5. **逐条获取笔记详情** — TikHub API 限速自适应，自动调节间隔（`fetch_note_detail`）
 6. **checkpoint 断点恢复** — 每 10 条自动存盘
 
 输出文件（JSON）：
@@ -265,53 +282,59 @@ AI 必须读取 `AI蒸馏任务.md`，生成以下最终交付物：
 
 ---
 
-## MCP 调用协议
+## TikHub API 调用协议
 
-使用 HTTP + JSON-RPC 协议，每次调用需要三步：
+使用 HTTP REST API，Bearer Token 认证：
 
 ```python
-from scripts.utils.mcp_client import MCPClient
+from scripts.utils.tikhub_client import TikHubClient
 
-client = MCPClient(port=18060)
-data = client.call("search_feeds", {"keyword": "<博主名>"})
+client = TikHubClient()  # 自动从环境变量/配置文件读取 Token
+data = client.search_notes("博主名")
 ```
 
-### 可用工具
+### 可用端点
 
-| 工具名 | 作用 | 关键参数 |
-|--------|------|---------|
-| `check_login_status` | 检查登录状态 | 无 |
-| `get_login_qrcode` | 获取登录二维码 | 无 |
-| `search_feeds` | 搜索笔记 | `keyword` |
-| `user_profile` | 获取用户主页 | `user_id`, `xsec_token` |
-| `get_feed_detail` | 获取笔记详情 | `feed_id`（注意不是 `note_id`） |
+| 方法 | 用途 | 关键参数 |
+|------|------|---------|
+| `search_users(keyword)` | 搜索用户（精准匹配博主） | `keyword` |
+| `search_notes(keyword)` | 搜索笔记 | `keyword`, `page`, `sort` |
+| `fetch_user_info(user_id)` | 获取用户主页信息 | `user_id` |
+| `fetch_user_notes(user_id)` | 获取用户笔记列表 | `user_id`, `cursor` |
+| `fetch_note_detail(note_id)` | 获取笔记详情+评论 | `note_id` |
 
-### 踩坑记录
+### TikHub 使用注意
 
-- `get_feed_detail` 的参数名是 `feed_id`，不是 `note_id`
-- `user_profile` 需要 `xsec_token` 参数，从搜索结果中获取
-- 每次新的调用链都需要重新 `init → notify → call`（session 不持久）
-- 请求间隔建议 2-3 秒，否则可能触发临时风控
+- Token 需在 https://user.tikhub.io 注册获取并充值
+- **权限不足（403）**：Token 的 scope 未勾选全部 `xiaohongshu` 相关端点。解决方法：登录 TikHub 控制台 → API 权限，一键勾选全部小红书端点
+- **余额不足（402）**：账户余额耗尽。解决方法：登录 TikHub 控制台充值
+- **所有端点均失败**：最常见原因是权限未全部开通或余额不足。请优先检查这两项
+- 429 限速：客户端内置 RPS 自适应限速（自动检测账户套餐），一般无需手动处理
+- 请求间隔由客户端自动管理（基于账户 RPS 限制 × 0.7 安全系数）
+- **密钥存储**：用户输入的 Token 会自动保存到 `~/.xiaohongshu/tikhub_config.json`，下次运行自动读取，无需重复输入
 
 ---
 
 ## 文件结构
 
 ```text
-小红书博主拆解Skill/
+blogger-distiller/
 ├── SKILL.md                  # 你现在看的这个文件
 ├── run.py                    # 一键运行入口（串联 Phase 0→4）
 ├── install.py                # 自动安装脚本
 ├── scripts/
-│   ├── check_env.py          # Phase 0: 环境自动准备
-│   ├── crawl_blogger.py      # Phase 1: 数据采集
+│   ├── check_env.py          # Phase 0: 环境自动准备（TikHub Token 检查）
+│   ├── crawl_blogger.py      # Phase 1: 数据采集（TikHub API）
 │   ├── analyze.py            # Phase 2: 数据分析 + 认知层粗提取
 │   ├── deep_analyze.py       # Phase 3: 数据底稿 + AI 蒸馏任务
 │   ├── verify.py             # Phase 4: 数据校验模块
 │   └── utils/
+│       ├── tikhub_client.py  # TikHub REST API 客户端（限速+多端点降级）
+│       ├── endpoint_router.py # 端点池路由 + 自动降级引擎
+│       ├── endpoints.json    # 端点池配置（4组×7类 = 28 个端点）
+│       ├── adapters.py       # 响应数据归一化适配器
 │       ├── common.py         # 共用工具函数
-│       ├── mcp_client.py     # MCP HTTP 调用封装
-│       └── md_to_docx.py     # 历史兼容工具（当前主流程不再依赖）
+│       └── quality.py        # 数据质量检查工具
 └── references/
     └── 产出物质量标杆.md
 ```
@@ -333,7 +356,7 @@ AI 必须先执行 Phase 0.5 前置交互，再继续后面的流程。
 ### 一键运行
 
 ```bash
-cd 小红书博主拆解Skill/
+cd blogger-distiller/
 python run.py "<博主名>"
 ```
 
@@ -347,9 +370,9 @@ python run.py "<博主名>"
 ### 手动分步执行
 
 ```bash
-cd 小红书博主拆解Skill/
+cd blogger-distiller/
 
-# Phase 0: 环境自动准备
+# Phase 0: 环境自动准备（检查 Python + python-docx + TikHub Token）
 python scripts/check_env.py
 
 # Phase 1: 采集博主数据
@@ -371,20 +394,20 @@ python scripts/deep_analyze.py ./data/<博主名>_analysis.json "<博主名>" \
 
 ## 多平台兼容性
 
-| 平台 | 本机运行 | HTTP localhost | Python | 文件读写 | 测试状态 |
-|------|---------|---------------|--------|---------|---------|
+| 平台 | 本机运行 | HTTP API | Python | 文件读写 | 测试状态 |
+|------|---------|----------|--------|---------|---------|
 | CodeBuddy (WorkBuddy) | ✅ | ✅ | ✅ | ✅ | ✅ 已验证 |
 | Claude Code | ✅ | ✅ | ✅ | ✅ | ✅ 已验证 |
-| OpenClaw (本地) | ✅ | ✅ | ✅ | 待测试 | 待测试 |
-| OpenClaw (云端) | ❌ | ❌ | ✅ | ⚠️ 受限 | ❌ 不支持 |
+| OpenClaw (本地) | ✅ | ✅ | ✅ | ✅ | 待测试 |
+| OpenClaw (云端) | ✅ | ✅ | ✅ | ✅ | 待测试（不再需要桌面环境）|
 | Codex | ✅ | ✅ | ✅ | ✅ | ✅ 已验证 |
 
 ### 核心原则
 
-1. 一份 `SKILL.md` 兼容 WorkBuddy / Claude Code / OpenClaw/ Codex
+1. 一份 `SKILL.md` 兼容 WorkBuddy / Claude Code / OpenClaw / Codex
 2. 工具函数提取到 `utils/common.py` 共用
 3. 使用标准库（`urllib`）避免外部依赖
-4. 登录扫码做好降级策略（渲染图片 → 保存 PNG → 输出 URL）
+4. Token 三级加载（环境变量 → 配置文件 → 交互输入），无需桌面环境
 
 ---
 

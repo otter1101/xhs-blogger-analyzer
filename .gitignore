@@ -17,10 +17,17 @@ Thumbs.db
 output/
 data/
 test_output/
+*.log
 *.docx
 *.json
 !references/**
 !tests/fixtures/*.json
+!scripts/utils/endpoints.json
+
+# 密钥/环境配置（不要提交到仓库）
+.env
+.env.*
+tikhub_config.json
 
 # 工作流临时文件
 _参考资料/

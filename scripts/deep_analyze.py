@@ -292,8 +292,8 @@ def gen_enhanced_deep_analysis(nickname, stats, top10, category_stats, tag_freq,
         if n.get("comment_list"):
             lines.append(f"- **热评洞察**:")
             for c in n["comment_list"][:3]:
-                prefix = "[作者] " if c.get("is_author") else ""
-                lines.append(f"  - {prefix}{c['user']}: {c['content'][:60]}")
+                # v2.0 方案A：作者已回填真实昵称，无需再加 [作者] prefix
+                lines.append(f"  - {c['user']}: {c['content'][:60]}")
 
     lines.append(f"\n## 五、标题模式分析")
     if title_patterns:
@@ -714,8 +714,8 @@ def gen_data_draft(nickname, stats, top10, category_stats, tag_freq,
         if n.get("comment_list"):
             lines.append(f"\n热评：")
             for c in n["comment_list"][:5]:
-                prefix = "[作者] " if c.get("is_author") else ""
-                lines.append(f"- {prefix}{c['user']}：{c['content'][:80]}")
+                # v2.0 方案A：作者已回填真实昵称，无需再加 [作者] prefix
+                lines.append(f"- {c['user']}：{c['content'][:80]}")
 
     # ---- 认知层数据（新增）----
     lines.append(f"\n---")
@@ -998,8 +998,8 @@ def gen_distill_task(nickname, stats, top10, category_stats, tag_freq,
         if n.get("comment_list"):
             lines.append(f"\n热评：")
             for c in n["comment_list"][:5]:
-                prefix = "[作者] " if c.get("is_author") else ""
-                lines.append(f"- {prefix}{c['user']}：{c['content'][:80]}")
+                # v2.0 方案A：作者已回填真实昵称，无需再加 [作者] prefix
+                lines.append(f"- {c['user']}：{c['content'][:80]}")
         lines.append("")
 
     # ---- 发展趋势 ----
@@ -1030,7 +1030,7 @@ def gen_distill_task(nickname, stats, top10, category_stats, tag_freq,
         f"",
         f"### 设计方向：博主档案系统 / Archive Terminal",
         f"",
-        f"参考语言是"工业档案"——做一个"博主数据蒸馏终端"的感觉。",
+        f'参考语言是"工业档案"——做一个"博主数据蒸馏终端"的感觉。',
         f"系统层（编号/标签/数字）用等宽字体，内容层（中文正文/标题）用衬线字体，形成双层次感。",
         f"",
         f"#### 技术栈",
@@ -1123,7 +1123,7 @@ def gen_distill_task(nickname, stats, top10, category_stats, tag_freq,
         f"- **禁止**：内层容器背景色与页面底色相同（导致卡片消失在背景里）",
         f"- **禁止**：h2 超过 22px，正文 line-height 超过 1.8（导致内容撑满整屏）",
         f"- **禁止**：IF→Then 内容用纯 `<p>` 标签（必须用 `border-left: 4px solid #8A3926` 的容器包裹）",
-        f"- **禁止**：模块标题混入"先看结论："等语气词",
+        f'- **禁止**：模块标题混入"先看结论："等语气词',
         f"- **禁止**：全站只用单一品牌色（必须使用上方完整五色系统）",
         f"- **禁止**：白色卡片 / 圆角 / box-shadow",
         f"- **禁止**：`prefers-reduced-motion` 未处理（必须加 @media 禁用所有动效）",
@@ -1858,6 +1858,41 @@ def gen_distill_task(nickname, stats, top10, category_stats, tag_freq,
 # 主函数
 # ----------------------------------------------------------
 
+def _restore_author_identity(analysis, nickname):
+    """合规改造 v2.0 · 方案 A 的作者身份回填
+
+    中间产物（raw / analysis.json）里作者被脱敏为 "作者"。
+    本函数在生成最终产出物前，把 "作者" 回填为博主真实昵称。
+    读者保持 "读者N" 不动。
+
+    遍历范围：top10 列表 + notes 列表里每条笔记的 comment_list 及其子评论。
+
+    修改方式：原地修改 analysis dict 里的字符串字段。
+    """
+    if not nickname:
+        return
+
+    def _patch_comment(c):
+        # 主评论
+        if c.get("user") == "作者":
+            c["user"] = nickname
+        # 子评论
+        for sc in c.get("sub_comments", []) or []:
+            if sc.get("user") == "作者":
+                sc["user"] = nickname
+            # reply_to 如果指向作者，也回填
+            if sc.get("reply_to") == "作者":
+                sc["reply_to"] = nickname
+        # 主评论的 reply_to（少见但兼容）
+        if c.get("reply_to") == "作者":
+            c["reply_to"] = nickname
+
+    for bucket in ("top10", "notes"):
+        for note in analysis.get(bucket, []) or []:
+            for c in note.get("comment_list", []) or []:
+                _patch_comment(c)
+
+
 def deep_analyze(analysis_path, nickname, output_dir, notes_details_path=None, mode="A"):
     """
     执行确定性深度分析，生成增强版文档 + AI蒸馏任务.md。
@@ -1873,6 +1908,13 @@ def deep_analyze(analysis_path, nickname, output_dir, notes_details_path=None, m
 
     with open(analysis_path, "r", encoding="utf-8") as f:
         analysis = json.load(f)
+
+    # 合规改造 v2.0 · 方案 A：作者身份回填
+    # raw JSON 和 analysis.json 中间产物里，作者被脱敏成 "作者"（匿名占位符），
+    # 读者被脱敏成 "读者N"。到了最终产出物（HTML 蒸馏报告 / 创作指南 skill / 创作基因 skill）
+    # 这一层，将 "作者" 回填为博主真实昵称，让用户能在产出物里看到是谁的内容。
+    # 读者继续保持 "读者N" 匿名。
+    _restore_author_identity(analysis, nickname)
 
     stats = analysis["stats"]
     top10 = analysis["top10"]
@@ -2033,6 +2075,8 @@ if __name__ == "__main__":
 
     result = deep_analyze(args.analysis_path, args.nickname, args.output, args.details, mode=args.mode)
 
-    ok = sum(1 for r in result["docs"] if r["ok"])
-    print(f"\n完成: {ok}/{len(result['docs'])} 份增强版文档生成成功")
+    # 兼容新旧返回结构：新版只返回 task_path，旧版含 docs
+    if "docs" in result:
+        ok = sum(1 for r in result["docs"] if r["ok"])
+        print(f"\n完成: {ok}/{len(result['docs'])} 份增强版文档生成成功")
     print(f"\n💡 提示: 查看 {result['task_path']} 获取 AI 可补充的蒸馏任务")

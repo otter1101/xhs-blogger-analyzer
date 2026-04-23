@@ -238,10 +238,17 @@ def analyze_notes(details_path, self_details_path=None):
                 })
             continue
         
-        # 兼容两种数据格式
-        note = item.get("data", {}).get("note", item)
+        # 兼容多种数据格式：
+        #   A. crawl_blogger 当前输出: { note: {...}, comments: {list: [...]}, _feed_id, _meta }
+        #   B. 旧格式: { data: { note: {...}, comments: {...} } }
+        #   C. 扁平 note 对象
+        if "note" in item and isinstance(item.get("note"), dict):
+            note = item["note"]
+            comments_data = item.get("comments", {})
+        else:
+            note = item.get("data", {}).get("note", item)
+            comments_data = item.get("data", {}).get("comments", item.get("comments", {}))
         interact = note.get("interactInfo", item.get("interactInfo", {}))
-        comments_data = item.get("data", {}).get("comments", item.get("comments", {}))
         comment_list = comments_data.get("list", []) if isinstance(comments_data, dict) else []
         
         tags = extract_tags(note.get("desc", ""))
@@ -319,19 +326,35 @@ def analyze_notes(details_path, self_details_path=None):
     for n in notes[:10]:
         top_comments = []
         for c in n["comment_list"][:5]:
+            # 合规改造 v2.0：评论已在 crawl 阶段源头脱敏，只读 speaker / is_author
+            # 兼容旧数据：若无 speaker（v1.x 旧 JSON）则回退到 userInfo.nickname
+            speaker = c.get("speaker") or c.get("userInfo", {}).get("nickname", "?")
+            is_author = c.get("is_author")
+            if is_author is None:
+                is_author = "is_author" in str(c.get("showTags", []))
             comment_info = {
                 "content": c.get("content", "")[:100],
-                "likes": c.get("likeCount", "0"),
-                "user": c.get("userInfo", {}).get("nickname", "?"),
-                "is_author": "is_author" in str(c.get("showTags", [])),
+                "likes": c.get("likeCount", c.get("like_count", "0")),
+                "user": speaker,
+                "is_author": bool(is_author),
                 "sub_comments": [],
             }
-            for sc in (c.get("subComments") or [])[:2]:
-                comment_info["sub_comments"].append({
+            # 子评论字段兼容 snake + camel 两种风格
+            sub_list = c.get("subComments") or c.get("sub_comments") or []
+            for sc in sub_list[:2]:
+                sc_speaker = sc.get("speaker") or sc.get("userInfo", {}).get("nickname", "?")
+                sc_is_author = sc.get("is_author")
+                if sc_is_author is None:
+                    sc_is_author = "is_author" in str(sc.get("showTags", []))
+                sub_info = {
                     "content": sc.get("content", "")[:80],
-                    "user": sc.get("userInfo", {}).get("nickname", "?"),
-                    "is_author": "is_author" in str(sc.get("showTags", [])),
-                })
+                    "user": sc_speaker,
+                    "is_author": bool(sc_is_author),
+                }
+                # 如果有 reply_to（回复某人），一并带上供下游展示
+                if sc.get("reply_to"):
+                    sub_info["reply_to"] = sc["reply_to"]
+                comment_info["sub_comments"].append(sub_info)
             top_comments.append(comment_info)
         
         top10.append({
