@@ -276,6 +276,8 @@ blogger-distiller/
 - [DISCLAIMER.md](./DISCLAIMER.md) — 免责声明与使用边界
 - [SECURITY.md](./SECURITY.md) — 数据安全与隐私处理
 
-<img width="966" height="1482" alt="4e6765924534709dcdbb5b792b2d9bf6" src="https://github.com/user-attachments/assets/3bcaeaef-fea3-4156-b5ab-9970f71a6299" />
+<div align="center">
+<img width="280" alt="进群二维码" src="https://github.com/user-attachments/assets/3bcaeaef-fea3-4156-b5ab-9970f71a6299" />
+</div>
 
 
