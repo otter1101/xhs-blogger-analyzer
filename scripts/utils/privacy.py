@@ -27,7 +27,7 @@ privacy.py — 评论者身份脱敏工具
 - **字段双兼容**：snake_case（app/app_v2 端点）和 camelCase（web_v3 端点 + adapters）都支持
 """
 
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 # 合规改造版本号，下游 _meta 字段会引用这个
 PRIVACY_VERSION = "v2.0"
@@ -66,7 +66,7 @@ def _is_author(comment: dict) -> bool:
     return False
 
 
-def _extract_userid(comment: dict) -> str | None:
+def _extract_userid(comment: dict) -> Optional[str]:
     """从一条评论里抽出 userid，用于跨评论保持同一编号。
 
     优先顺序：
@@ -100,8 +100,8 @@ def _strip_identity(comment: dict) -> dict:
 
 def _anonymize_one(
     comment: dict,
-    reader_map: dict[str, str],
-    reader_counter: list[int],
+    reader_map: Dict[str, str],
+    reader_counter: List[int],
 ) -> dict:
     """脱敏单条评论（不处理嵌套子评论，由外层循环递归处理）。
 
@@ -159,7 +159,7 @@ def _anonymize_one(
     return clean
 
 
-def anonymize_comments(comments: list[dict]) -> list[dict]:
+def anonymize_comments(comments: List[dict]) -> List[dict]:
     """对一个评论列表整体做脱敏，返回新列表（不修改原对象）。
 
     评论结构（支持 snake_case 和 camelCase 两种风格）：
@@ -184,10 +184,10 @@ def anonymize_comments(comments: list[dict]) -> list[dict]:
         return []
 
     # 一个博主维度的全局映射表：同一 userid 跨评论保持同一编号
-    reader_map: dict[str, str] = {}
+    reader_map: Dict[str, str] = {}
     reader_counter = [0]
 
-    def _recurse(lst: list[dict]) -> list[dict]:
+    def _recurse(lst: List[dict]) -> List[dict]:
         result = []
         for c in lst:
             if not isinstance(c, dict):

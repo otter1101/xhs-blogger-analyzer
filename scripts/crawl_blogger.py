@@ -204,9 +204,13 @@ def find_blogger(client, keyword):
                 return best["uid"], best["nickname"], best["xsec"]
         else:
             print(f"  ℹ️ search_users 无结果，回退到 search_notes")
+            if hasattr(client, '_router'):
+                client._router.reset_category_cache("search")
     except Exception as e:
         print(f"  ⚠️ search_users 调用失败({e})，回退到 search_notes")
-    
+        if hasattr(client, '_router'):
+            client._router.reset_category_cache("search")
+
     # ========== 兜底：search_notes 交叉定位 ==========
     data = client.search_notes(keyword)
     feeds = _extract_feeds_from_search(data)
