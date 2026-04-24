@@ -177,16 +177,8 @@ AI 会自动完成下载和配置。
 
 ### 第 4 步：生成 API Token
 
-在 **控制台 → API Token** 页面生成一个 Token，然后配置：
+在 **控制台 → API Token** 页面生成一个 Token key，然后将其发给agent即可：
 
-```bash
-# 方式 1：环境变量（推荐）
-export TIKHUB_API_TOKEN="你的Token"        # macOS / Linux
-$env:TIKHUB_API_TOKEN = "你的Token"        # Windows PowerShell
-
-# 方式 2：命令行参数
-python scripts/crawl_blogger.py "博主名" --token "你的Token"
-```
 
 <details>
 <summary>可选：自定义 RPS 加速</summary>
