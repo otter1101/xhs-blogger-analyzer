@@ -141,14 +141,14 @@ def detect_posting_frequency(notes_with_time):
         return {"pattern": "数据不足", "avg_days_between": 0}
 
     # 计算相邻发布间隔
-    from datetime import datetime as dt
+    # 自动检测时间戳单位：TikHub API 返回秒级（~1.7e9），旧版 MCP 可能返回毫秒级（~1.7e12）
+    divisor = (1000 * 86400) if timestamps[0] > 1e11 else 86400
     intervals = []
     for i in range(1, len(timestamps)):
         try:
             diff = (timestamps[i] - timestamps[i - 1])
             if isinstance(diff, (int, float)):
-                # 假设是毫秒时间戳
-                days = diff / (1000 * 86400)
+                days = diff / divisor
             else:
                 days = diff.total_seconds() / 86400
             if 0 < days < 365:  # 排除异常值
@@ -1105,20 +1105,22 @@ def gen_distill_task(nickname, stats, top10, category_stats, tag_freq,
         f"",
         f"**1. 滚动进入 fadeInUp**",
         f"- 所有 `.module` 初始状态：`opacity: 0; transform: translateY(20px)`",
-        f"- IntersectionObserver（threshold: 0.1）触发时加 `.visible` 类",
+        f"- **模块1（页面顶部反转模块）**：HTML 里直接写 `class=\"module module-inv visible\"`，页面加载时就可见，不需要 observer",
+        f"- **普通模块（2-7, 9）**：`querySelectorAll('.module:not(.module-inv)')` 建 observer，进入视口加 `visible`",
+        f"- **反转模块8和10**：必须单独建第二个 observer（`querySelectorAll('.module-inv:not(#mod1)')`），进入视口时同样加 `visible`，否则它们永远 opacity:0",
         f"- `.visible` 状态：`opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease`",
         f"",
         f"**2. 数字 counter 动画**（仅模块8）",
         f"- 目标数字用 `data-target` 属性存储，`data-decimals` 控制小数位",
         f"- 进入视口时从 0 动画到目标值，ease-out cubic，时长 1800ms",
-        f"- 需要动画的数字：均赞 2518、均藏 2213、均评 70、藏赞比 87.9%、爆款率 3.1%",
+        f"- 需要动画的数字用实际采集到的统计数据填入，不要用示例数字占位",
         f"",
         f"**3. 分割线 draw-in**",
         f"- 每个模块标题下方放一个 `.divider-wrap`，内含 `.divider-line`",
         f"- `.divider-line` 初始：`width: 0`；模块进入视口后延迟 200ms：`width: 100%; transition: width .8s ease`",
         f"- 反转模块内的分割线颜色改为 `rgba(250,246,242,0.4)`",
         f"",
-        f"#### 禁止事项（V1/V2 已犯过的错误）",
+        f"#### 禁止事项（V1/V2/V3 已犯过的错误）",
         f"",
         f"- **禁止**：内层容器背景色与页面底色相同（导致卡片消失在背景里）",
         f"- **禁止**：h2 超过 22px，正文 line-height 超过 1.8（导致内容撑满整屏）",
@@ -1127,6 +1129,8 @@ def gen_distill_task(nickname, stats, top10, category_stats, tag_freq,
         f"- **禁止**：全站只用单一品牌色（必须使用上方完整五色系统）",
         f"- **禁止**：白色卡片 / 圆角 / box-shadow",
         f"- **禁止**：`prefers-reduced-motion` 未处理（必须加 @media 禁用所有动效）",
+        f"- **禁止**：JS observer 选择器写成 `.module:not(.module-inv)` 而不给反转模块建第二个 observer（导致模块8/10永久透明）",
+        f"- **禁止**：`.module-inv` 没有两个类写法——必须是 `class=\"module module-inv\"`，不能只写 `class=\"module-inv\"`",
         f"",
         f"---",
         f"",
