@@ -276,10 +276,7 @@ blogger-distiller/
 - [DISCLAIMER.md](./DISCLAIMER.md) — 免责声明与使用边界
 - [SECURITY.md](./SECURITY.md) — 数据安全与隐私处理
 
-<div align="center">
-<img width="280" alt="进群二维码" src="https://github.com/user-attachments/assets/3bcaeaef-fea3-4156-b5ab-9970f71a6299" />
-</div>
-可进群交流与反馈～
-因之前仓库私密过，星数都消失了，如果觉得本工具有用，辛苦在skill右上角点个星呀！
+
+如果觉得本工具有用，辛苦在skill右上角点个星呀！
 
 
