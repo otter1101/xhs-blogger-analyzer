@@ -17,7 +17,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[产出物](#产出物) · [分析模式](#分析模式) · [30 秒上手](#30-秒上手) · [API 配置](#api-配置tikhub) · [成本估算](#成本估算)
+[产出物](#产出物) · [分析模式](#分析模式) · [30 秒上手](#30-秒上手) · [API 配置](#api-配置tikhub) · [成本估算](#成本估算) · [进群交流](#进群交流) · [找到作者](#找到作者)
 
 </div>
 
@@ -277,6 +277,22 @@ blogger-distiller/
 - [SECURITY.md](./SECURITY.md) — 数据安全与隐私处理
 
 
-如果觉得本工具有用，辛苦在skill右上角点个星呀！
+如果觉得本工具有用，辛苦在右上角点个 ⭐ Star 呀！
+
+---
+
+## 进群交流
+
+<div align="center">
+<img src="assets/qr-group.jpg" width="220" alt="博主蒸馏器 skill 社群二维码">
+</div>
+
+---
+
+## 找到作者
+
+<div align="center">
+<img src="assets/qr-xiaohongshu.jpg" width="220" alt="小红书：Aha 水濑">&nbsp;&nbsp;&nbsp;&nbsp;<img src="assets/qr-douyin.jpg" width="220" alt="抖音：@Aha 水濑">
+</div>
 
 
